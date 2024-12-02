@@ -21,6 +21,7 @@ def handle_error(error):
 # User endpoints
 @app.route('/users', methods=['POST'])
 def create_user():
+    print("Creating user with wallet address:", request.get_json())
     data = request.get_json()
     wallet_address = data.get('wallet_address')
     if not wallet_address:
@@ -135,10 +136,10 @@ def print_hi():
     print(f"hi (Current time: {datetime.now().strftime('%H:%M:%S')})")
 
 # Add scheduler setup before the app.run
+# ... existing code ...
 if __name__ == '__main__':
-    # Initialize the scheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=print_hi, trigger='cron', hour='*', minute='0')
     scheduler.start()
     
-    app.run(debug=True, port=5000) 
+    app.run(debug=True, port=6000, host='0.0.0.0')  # Added host='0.0.0.0'
