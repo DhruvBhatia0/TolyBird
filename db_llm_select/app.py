@@ -4,13 +4,15 @@ from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import time
+from tweet_selector import run_hourly_selection
 
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:3000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type", "Accept"],
+        "expose_headers": ["Content-Type"]
     }
 })
 
@@ -59,23 +61,29 @@ def update_user(user_id):
 # Submission endpoints
 @app.route('/submissions', methods=['POST'])
 def create_submission():
-    data = request.get_json()
-    tweet_text = data.get('tweet_text')
-    bid_amount = data.get('bid_amount')
-    
-    if not all([tweet_text, bid_amount]):
-        return jsonify({"error": "tweet_text and bid_amount are required"}), 400
-    
-    submission = db.create_submission(tweet_text, float(bid_amount))
-    print(f"\n=== New Submission Created ===")
-    print(f"Tweet: {tweet_text}")
-    print(f"Bid Amount: {bid_amount} SOL")
-    print("============================\n")
-    
-    return jsonify({
-        **submission,
-        "message": "Submission successfully created and stored in database!"
-    }), 201
+    try:
+        data = request.get_json()
+        tweet_text = data.get('tweet_text')
+        bid_amount = data.get('bid_amount')
+        
+        if not all([tweet_text, bid_amount]):
+            return jsonify({"error": "tweet_text and bid_amount are required"}), 400
+        
+        submission = db.create_submission(tweet_text, float(bid_amount))
+        print(f"\n=== New Submission Created ===")
+        print(f"Tweet: {tweet_text}")
+        print(f"Bid Amount: {bid_amount} SOL")
+        print("============================\n")
+        
+        return jsonify({
+            **submission,
+            "message": "Submission successfully created and stored in database!"
+        }), 201
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "status": "error"
+        }), 500
 
 @app.route('/submissions/<int:submission_id>', methods=['GET'])
 def get_submission(submission_id):
@@ -150,10 +158,9 @@ def print_hi():
     print(f"hi (Current time: {datetime.now().strftime('%H:%M:%S')})")
 
 # Add scheduler setup before the app.run
-# ... existing code ...
 if __name__ == '__main__':
     scheduler = BackgroundScheduler()
-    scheduler.add_job(func=print_hi, trigger='cron', hour='*', minute='0')
+    scheduler.add_job(func=run_hourly_selection, trigger='cron', hour='*', minute='0')
     scheduler.start()
     
     app.run(debug=True, port=6000, host='0.0.0.0')
