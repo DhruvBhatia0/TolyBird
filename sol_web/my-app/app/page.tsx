@@ -1,4 +1,12 @@
-import PaymentForm from './components/PaymentForm';
+"use client";
+
+import dynamic from 'next/dynamic';
+
+// Dynamically import PaymentForm with ssr disabled
+const PaymentForm = dynamic(
+  () => import('./components/PaymentForm'),
+  { ssr: false }
+);
 
 export default function Home() {
   return (
