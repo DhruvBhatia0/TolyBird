@@ -3,9 +3,16 @@ from db_operations import DatabaseManager
 from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
+import time
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Initialize database manager
 db = DatabaseManager()
@@ -53,15 +60,22 @@ def update_user(user_id):
 @app.route('/submissions', methods=['POST'])
 def create_submission():
     data = request.get_json()
-    user_id = data.get('user_id')
     tweet_text = data.get('tweet_text')
     bid_amount = data.get('bid_amount')
     
-    if not all([user_id, tweet_text, bid_amount]):
-        return jsonify({"error": "user_id, tweet_text, and bid_amount are required"}), 400
+    if not all([tweet_text, bid_amount]):
+        return jsonify({"error": "tweet_text and bid_amount are required"}), 400
     
-    submission = db.create_submission(user_id, tweet_text, float(bid_amount))
-    return jsonify(submission), 201
+    submission = db.create_submission(tweet_text, float(bid_amount))
+    print(f"\n=== New Submission Created ===")
+    print(f"Tweet: {tweet_text}")
+    print(f"Bid Amount: {bid_amount} SOL")
+    print("============================\n")
+    
+    return jsonify({
+        **submission,
+        "message": "Submission successfully created and stored in database!"
+    }), 201
 
 @app.route('/submissions/<int:submission_id>', methods=['GET'])
 def get_submission(submission_id):
@@ -142,4 +156,4 @@ if __name__ == '__main__':
     scheduler.add_job(func=print_hi, trigger='cron', hour='*', minute='0')
     scheduler.start()
     
-    app.run(debug=True, port=6000, host='0.0.0.0')  # Added host='0.0.0.0'
+    app.run(debug=True, port=6000, host='0.0.0.0')

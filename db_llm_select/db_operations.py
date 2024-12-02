@@ -51,10 +51,10 @@ class DatabaseManager:
         return self.cur.rowcount > 0
 
     # Submissions CRUD operations
-    def create_submission(self, user_id: int, tweet_text: str, bid_amount: float) -> Dict:
+    def create_submission(self, tweet_text: str, bid_amount: float) -> Dict:
         self.cur.execute(
-            "INSERT INTO submissions (user_id, tweet_text, bid_amount) VALUES (%s, %s, %s) RETURNING *",
-            (user_id, tweet_text, bid_amount)
+            "INSERT INTO submissions (tweet_text, bid_amount) VALUES (%s, %s) RETURNING *",
+            (tweet_text, bid_amount)
         )
         self.conn.commit()
         return dict(self.cur.fetchone())

@@ -1,118 +1,119 @@
 "use client";
 
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { useState } from "react";
+import { useState } from 'react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { LAMPORTS_PER_SOL, SystemProgram, Transaction } from '@solana/web3.js';
+import { createSubmission } from '../services/api';
 
-const PaymentForm = () => {
+export default function PaymentForm() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
-  const [message, setMessage] = useState("");
-  const [username, setUsername] = useState("");
+  const [amount, setAmount] = useState('');
+  const [tweet, setTweet] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Replace this with your wallet address where you want to receive payments
-  const PAYMENT_WALLET = new PublicKey("9QowtwuhQ9rWaF2jcbeid3GcDTDYEtDDFxCgkUfTYjM6");
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!publicKey) {
-      alert("Please connect your wallet first!");
+      setError('Please connect your wallet first');
       return;
     }
 
     try {
-      // Create a transaction to send 1 SOL
+      setLoading(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      // Create the transaction
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
-          toPubkey: PAYMENT_WALLET,
-          lamports: LAMPORTS_PER_SOL, // 1 SOL = 1000000000 Lamports
+          toPubkey: publicKey,
+          lamports: parseFloat(amount) * LAMPORTS_PER_SOL,
         })
       );
 
+      // Send the transaction
       const signature = await sendTransaction(transaction, connection);
-      console.log("Transaction sent:", signature);
       
-      // Wait for transaction confirmation
-      const confirmation = await connection.confirmTransaction(signature, "confirmed");
-      
-      if (confirmation.value.err) {
-        throw new Error("Transaction failed!");
-      }
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'processed');
 
-      // Log all the information
-      console.log({
-        username,
-        walletAddress: publicKey.toString(),
-        message,
-        transactionSignature: signature
+      // Create submission in the database
+      const response = await createSubmission({
+        tweet_text: tweet,
+        bid_amount: parseFloat(amount)
       });
 
-      setMessage(""); // Clear the input
-      setUsername(""); // Clear username
-      alert("Payment and message submitted successfully!");
+      console.log('Payment successful!');
+      console.log('Signature:', signature);
       
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Transaction failed! Please try again.");
+      // Show success message
+      setSuccessMessage(
+        `Success! Transaction signature: ${signature.slice(0, 8)}...${signature.slice(-8)}\n${response.message}`
+      );
+      
+      // Clear form
+      setAmount('');
+      setTweet('');
+
+    } catch (err: unknown) {
+      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="mb-4 flex justify-end">
+    <div className="max-w-md mx-auto p-6 bg-white/10 rounded-lg shadow-lg">
+      <div className="mb-6 flex justify-center">
         <WalletMultiButton />
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="username" className="block text-sm font-medium mb-2">
-            Your Username
-          </label>
-          <input
-            type="text"
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full p-2 border rounded-md text-black"
-            placeholder="Enter your username..."
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="message" className="block text-sm font-medium mb-2">
-            Your Message (1 SOL required)
-          </label>
+          <label className="block text-sm font-medium mb-2">Tweet Text</label>
           <textarea
-            id="message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="w-full p-2 border rounded-md text-black"
-            rows={4}
-            placeholder="Enter your message here..."
+            value={tweet}
+            onChange={(e) => setTweet(e.target.value)}
+            placeholder="Enter your tweet"
+            className="w-full p-3 border rounded-md text-black bg-white/90"
             required
+            rows={3}
           />
         </div>
-        
+        <div>
+          <label className="block text-sm font-medium mb-2">Amount (SOL)</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Amount in SOL"
+            className="w-full p-3 border rounded-md text-black bg-white/90"
+            required
+            step="0.000000001"
+            min="0"
+          />
+        </div>
+        {error && (
+          <div className="text-red-500 text-sm p-2 bg-red-100/10 rounded">{error}</div>
+        )}
+        {successMessage && (
+          <div className="text-green-500 text-sm p-2 bg-green-100/10 rounded whitespace-pre-line">{successMessage}</div>
+        )}
         <button
           type="submit"
-          disabled={!publicKey || !message || !username}
-          className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled={loading || !publicKey}
+          className="w-full bg-purple-600 text-white py-3 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
-          Submit Message & Pay 1 SOL
+          {loading ? 'Processing...' : 'Submit Tweet'}
         </button>
       </form>
-
-      {publicKey && (
-        <div className="mt-4 text-sm text-gray-600">
-          Connected Wallet: {publicKey.toString()}
-        </div>
-      )}
     </div>
   );
-};
-
-export default PaymentForm; 
+} 
