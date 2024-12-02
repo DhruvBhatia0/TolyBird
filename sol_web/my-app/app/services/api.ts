@@ -22,6 +22,11 @@ export const createSubmission = async (data: SubmissionRequest): Promise<Submiss
     body: JSON.stringify(data),
   });
 
+  const contentType = response.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    throw new Error(`Server returned ${response.status} ${response.statusText}`);
+  }
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to create submission');
