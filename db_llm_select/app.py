@@ -65,14 +65,16 @@ def create_submission():
         data = request.get_json()
         tweet_text = data.get('tweet_text')
         bid_amount = data.get('bid_amount')
+        wallet_address = data.get('wallet_address')
         
-        if not all([tweet_text, bid_amount]):
-            return jsonify({"error": "tweet_text and bid_amount are required"}), 400
+        if not all([tweet_text, bid_amount, wallet_address]):
+            return jsonify({"error": "tweet_text, bid_amount, and wallet_address are required"}), 400
         
-        submission = db.create_submission(tweet_text, float(bid_amount))
+        submission = db.create_submission(tweet_text, float(bid_amount), wallet_address)
         print(f"\n=== New Submission Created ===")
         print(f"Tweet: {tweet_text}")
         print(f"Bid Amount: {bid_amount} SOL")
+        print(f"Wallet: {wallet_address}")
         print("============================\n")
         
         return jsonify({

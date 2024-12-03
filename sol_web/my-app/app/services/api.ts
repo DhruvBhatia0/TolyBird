@@ -3,6 +3,7 @@ const API_BASE_URL = '/api';
 export interface SubmissionRequest {
   tweet_text: string;
   bid_amount: number;
+  wallet_address: string;
 }
 
 export interface SubmissionResponse {

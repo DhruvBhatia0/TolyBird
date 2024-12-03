@@ -46,7 +46,8 @@ export default function PaymentForm() {
       // Create submission in the database
       const response = await createSubmission({
         tweet_text: tweet,
-        bid_amount: parseFloat(amount)
+        bid_amount: parseFloat(amount),
+        wallet_address: publicKey.toString()
       });
 
       console.log('Payment successful!');

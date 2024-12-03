@@ -124,9 +124,15 @@ Context of recent tweets and their engagement:
             # Extract selected tweet
             llm_response = response.choices[0].message.content
             selected_tweet = None
+            selected_submission = None
             for line in llm_response.split('\n'):
                 if line.startswith('SELECTED_TWEET:'):
                     selected_tweet = line.replace('SELECTED_TWEET:', '').strip()
+                    # Find the submission that matches this tweet
+                    for submission in submissions:
+                        if submission['tweet_text'] == selected_tweet:
+                            selected_submission = submission
+                            break
                     break
 
             if not selected_tweet:
@@ -137,9 +143,10 @@ Context of recent tweets and their engagement:
             tweet_response = twitter_client.create_tweet(text=selected_tweet)
             
             # Save tweet to database using existing create_tweet method
-            self.db.create_tweet(selected_tweet)
+            self.db.create_tweet(selected_tweet, selected_submission['wallet_address'])
 
             print(f"Successfully posted tweet: {selected_tweet}")
+            print(f"From wallet: {selected_submission['wallet_address']}")
             return selected_tweet
 
         except Exception as e:

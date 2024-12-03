@@ -8,6 +8,7 @@ CREATE TABLE submissions (
     submission_id SERIAL PRIMARY KEY,
     tweet_text TEXT NOT NULL,
     bid_amount DECIMAL(18,8) NOT NULL,
+    wallet_address TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -15,6 +16,7 @@ CREATE TABLE submissions (
 CREATE TABLE tweets (
     tweet_id SERIAL PRIMARY KEY,
     tweet_text TEXT NOT NULL,
+    wallet_address TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
