@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { LAMPORTS_PER_SOL, SystemProgram, Transaction } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, SystemProgram, Transaction, PublicKey } from '@solana/web3.js';
 import { createSubmission } from '../services/api';
+
+// Treasury wallet that receives the bids
+const TREASURY_WALLET = new PublicKey('4cCV2NpYqjMeXzbTyPgnsw1azSuQCcvRtAM9GpTotUGk');
 
 export default function PaymentForm() {
   const { connection } = useConnection();
@@ -32,7 +35,7 @@ export default function PaymentForm() {
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
-          toPubkey: publicKey,
+          toPubkey: TREASURY_WALLET,
           lamports: parseFloat(amount) * LAMPORTS_PER_SOL,
         })
       );
@@ -74,6 +77,13 @@ export default function PaymentForm() {
     <div className="max-w-md mx-auto p-6 bg-white/10 rounded-lg shadow-lg">
       <div className="mb-6 flex justify-center">
         <WalletMultiButton />
+      </div>
+      
+      <div className="mb-4 text-sm text-center text-gray-300">
+        <p>Your bid will be sent to:</p>
+        <code className="text-xs break-all bg-black/20 p-2 rounded mt-1 block">
+          {TREASURY_WALLET.toString()}
+        </code>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">

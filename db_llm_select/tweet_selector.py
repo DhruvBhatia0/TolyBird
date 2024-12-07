@@ -140,7 +140,7 @@ Context of recent tweets and their engagement:
                 return None
 
             # Post tweet
-            tweet_response = twitter_client.create_tweet(text=selected_tweet)
+            # tweet_response = twitter_client.create_tweet(text=selected_tweet)
             
             # Save tweet to database using existing create_tweet method
             self.db.create_tweet(selected_tweet, selected_submission['wallet_address'])
