@@ -3,19 +3,83 @@
 import { useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, SystemProgram, Transaction, PublicKey } from '@solana/web3.js';
+
+// Treasury wallet that receives the bids
+const TREASURY_WALLET = new PublicKey('4cCV2NpYqjMeXzbTyPgnsw1azSuQCcvRtAM9GpTotUGk');
 
 export default function PaymentForm() {
   const { connection } = useConnection();
-  const { connected, publicKey } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
   const [message, setMessage] = useState('');
   const [amount, setAmount] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Your existing submit logic here
+    
+    if (!publicKey) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      // Create the transaction
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: TREASURY_WALLET,
+          lamports: parseFloat(amount) * LAMPORTS_PER_SOL,
+        })
+      );
+
+      // Send the transaction
+      const signature = await sendTransaction(transaction, connection);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'processed');
+
+      // Submit to backend
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweet_text: message,
+          bid_amount: parseFloat(amount),
+          wallet_address: publicKey.toString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit message to backend');
+      }
+
+      const data = await response.json();
+      console.log('Submission successful:', data);
+      
+      // Show success message
+      setSuccessMessage(
+        `Success! Transaction signature: ${signature.slice(0, 8)}...${signature.slice(-8)}`
+      );
+      
+      // Clear form
+      setMessage('');
+      setAmount('');
+
+    } catch (err: unknown) {
+      console.error('Error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -24,7 +88,14 @@ export default function PaymentForm() {
         <WalletMultiButton className="btn" />
       </div>
 
-      {connected && (
+      <div className="text-sm text-center opacity-70">
+        <p>Your bid will be sent to:</p>
+        <code className="text-xs break-all block mt-1">
+          {TREASURY_WALLET.toString()}
+        </code>
+      </div>
+
+      {publicKey && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block mb-2 text-sm font-bold">
@@ -69,25 +140,23 @@ export default function PaymentForm() {
             </div>
           )}
 
-          {status === 'success' && (
-            <div className="p-3 bg-green-100/10 border border-green-500/20 rounded text-green-500 text-sm">
-              Message submitted successfully!
+          {successMessage && (
+            <div className="p-3 bg-green-100/10 border border-green-500/20 rounded text-green-500 text-sm whitespace-pre-line">
+              {successMessage}
             </div>
           )}
 
           <button
             type="submit"
             className="btn w-full"
-            disabled={status === 'loading'}
+            disabled={loading}
           >
-            {status === 'loading' ? 'Submitting...' : 'Submit Message'}
+            {loading ? 'Processing...' : 'Submit Message'}
           </button>
 
-          {publicKey && (
-            <p className="text-xs opacity-70 text-center break-all">
-              Connected: {publicKey.toString()}
-            </p>
-          )}
+          <p className="text-xs opacity-70 text-center break-all">
+            Connected: {publicKey.toString()}
+          </p>
         </form>
       )}
     </div>
