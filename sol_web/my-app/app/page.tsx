@@ -30,31 +30,6 @@ export default function Home() {
           <h1 className="text-2xl font-bold mb-4 text-center">
             Submit a Message with Solana Payment
           </h1>
-          
-          <div className="data-table mb-6">
-            <table>
-              <thead>
-                <tr>
-                  <th>Feature</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Network</td>
-                  <td>Solana Devnet</td>
-                </tr>
-                <tr>
-                  <td>Min Bid</td>
-                  <td>0.1 SOL</td>
-                </tr>
-                <tr>
-                  <td>Max Length</td>
-                  <td>280 characters</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
 
           <PaymentForm />
         </div>

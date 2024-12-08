@@ -32,12 +32,19 @@ export default function PaymentForm() {
             </label>
             <textarea
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value.length <= 280) {
+                  setMessage(e.target.value);
+                }
+              }}
               className="input w-full h-32 resize-none"
               placeholder="Enter your message (max 280 chars)"
               maxLength={280}
               required
             />
+            <div className="text-xs text-right opacity-70">
+              {message.length}/280 characters
+            </div>
           </div>
 
           <div>
