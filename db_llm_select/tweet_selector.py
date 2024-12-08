@@ -113,6 +113,8 @@ Context of recent tweets and their engagement:
         Calculate reward based on bid percentile
         Returns (reward_amount, remaining_pool)
         """
+        BUFFER_FOR_FEES = 0.5  # Leave 0.5 SOL for transaction fees
+        
         total_pool = sum(all_bids)
         
         # First remove winner's bid from pool (they get this back directly)
@@ -131,8 +133,19 @@ Context of recent tweets and their engagement:
         # Total reward is their bid back plus their share of the pool
         total_reward = winner_bid + reward_from_pool
         
-        # Remaining goes to vault
-        remaining_pool = adjusted_pool - reward_from_pool
+        # Remaining goes to vault, but leave buffer for fees
+        remaining_pool = max(0, adjusted_pool - reward_from_pool - BUFFER_FOR_FEES)
+        
+        print(f"\n=== Detailed Reward Calculation ===")
+        print(f"Total pool: {total_pool} SOL")
+        print(f"Winner's bid: {winner_bid} SOL")
+        print(f"Adjusted pool: {adjusted_pool} SOL")
+        print(f"Winner's percentile: {percentile:.2f}")
+        print(f"Reward percentage: {reward_percentage:.2f}")
+        print(f"Additional reward: {reward_from_pool:.4f} SOL")
+        print(f"Buffer for fees: {BUFFER_FOR_FEES} SOL")
+        print(f"Remaining for vault: {remaining_pool:.4f} SOL")
+        print(f"================================\n")
         
         return total_reward, remaining_pool
 
