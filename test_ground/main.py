@@ -4,7 +4,7 @@ import os
 
 client = Client("https://api.devnet.solana.com")
 
-private_key = "Ykc4CPB9GC1TqQf4LgDKtErxDUfuTS6wbbbmAqCk5x3PZ8uFjZz9M9bjzrVrYcQHT8s1LqHfE7rGPjub4U826bN"
+private_key = ""
 sender = Keypair.from_private_key(private_key)
 receiver = PublicKey("ECabWNyM52hbxm4xNENNVJ22m97iRjAsUVjMEv3T4HYB")
 amount = 100000
