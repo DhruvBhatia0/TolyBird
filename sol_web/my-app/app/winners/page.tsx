@@ -3,15 +3,23 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+const SOL_TO_USD = 235.60;  // Current SOL to USD rate
+
 interface Winner {
   tweet_text: string;
   wallet_address: string;
-  bid_amount: number;
+  payout_amount: number;
   created_at: string;
+}
+
+interface PayoutStats {
+  total_sol: number;
+  total_usd: number;
 }
 
 export default function WinnersPage() {
   const [winners, setWinners] = useState<Winner[]>([]);
+  const [payoutStats, setPayoutStats] = useState<PayoutStats>({ total_sol: 0, total_usd: 0 });
   const [loading, setLoading] = useState(true);
 
   const fetchWinners = async () => {
@@ -20,8 +28,15 @@ export default function WinnersPage() {
       if (!response.ok) throw new Error('Failed to fetch winners');
       const data = await response.json();
       setWinners(data);
-    } catch (error) {
-      console.error('Error fetching winners:', error);
+      
+      // Calculate totals
+      const totalSol = data.reduce((sum: number, winner: Winner) => sum + winner.payout_amount, 0);
+      setPayoutStats({
+        total_sol: totalSol,
+        total_usd: totalSol * SOL_TO_USD
+      });
+    } catch (err: any) {
+      console.error('Error fetching winners:', err?.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -58,7 +73,13 @@ export default function WinnersPage() {
     <main className="min-h-screen py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Previous Winners</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Previous Winners</h1>
+            <div className="mt-2 text-sm opacity-70">
+              <p>Total Payouts: {payoutStats.total_sol.toFixed(2)} SOL</p>
+              <p>(${payoutStats.total_usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)</p>
+            </div>
+          </div>
           <Link href="/" className="btn">
             Back to Home
           </Link>
@@ -74,7 +95,7 @@ export default function WinnersPage() {
                   <th>Time</th>
                   <th>Winner</th>
                   <th>Tweet</th>
-                  <th>Bid Amount</th>
+                  <th>Payout</th>
                 </tr>
               </thead>
               <tbody>
@@ -85,7 +106,7 @@ export default function WinnersPage() {
                       {formatWalletAddress(winner.wallet_address)}
                     </td>
                     <td>{winner.tweet_text}</td>
-                    <td>{winner.bid_amount} SOL</td>
+                    <td>{winner.payout_amount.toFixed(2)} SOL</td>
                   </tr>
                 ))}
                 {winners.length === 0 && (

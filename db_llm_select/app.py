@@ -134,6 +134,32 @@ def get_tweet_comments(tweet_id):
     comments = db.get_tweet_comments(tweet_id)
     return jsonify(comments)
 
+@app.route('/tweets', methods=['GET'])
+def get_tweets():
+    try:
+        # Get all tweets ordered by creation time, most recent first
+        db.cur.execute("""
+            SELECT tweet_text, wallet_address, payout_amount, created_at 
+            FROM tweets 
+            ORDER BY created_at DESC
+            LIMIT 50
+        """)
+        tweets = db.cur.fetchall()
+        
+        formatted_tweets = []
+        for tweet in tweets:
+            formatted_tweets.append({
+                'tweet_text': tweet['tweet_text'],
+                'wallet_address': tweet['wallet_address'],
+                'payout_amount': float(tweet['payout_amount']),
+                'created_at': tweet['created_at'].isoformat() if tweet['created_at'] else None
+            })
+        
+        return jsonify(formatted_tweets)
+    except Exception as e:
+        print(f"Error fetching tweets: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 # Comment endpoints
 @app.route('/comments', methods=['POST'])
 def create_comment():

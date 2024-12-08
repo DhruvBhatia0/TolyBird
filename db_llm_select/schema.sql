@@ -17,6 +17,7 @@ CREATE TABLE tweets (
     tweet_id SERIAL PRIMARY KEY,
     tweet_text TEXT NOT NULL,
     wallet_address TEXT NOT NULL,
+    payout_amount DECIMAL(18,8) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
