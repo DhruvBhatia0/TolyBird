@@ -1,4 +1,4 @@
-from tweet_selector import run_hourly_selection
+from tweet_selector import TweetSelector
 from db_operations import DatabaseManager
 
 def test_db_connection():
@@ -10,8 +10,16 @@ def test_db_connection():
     except Exception as e:
         print("Database connection failed:", e)
 
-if __name__ == "__main__":
+def main():
     print("Testing database connection...")
     test_db_connection()
     print("\nRunning hourly selection...")
-    run_hourly_selection()
+    selector = TweetSelector()
+    selected_tweet = selector.select_best_tweet()
+    if selected_tweet:
+        print(f"Tweet selected: {selected_tweet}")
+    else:
+        print("No tweet selected")
+
+if __name__ == "__main__":
+    main()

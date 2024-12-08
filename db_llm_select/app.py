@@ -159,10 +159,19 @@ def get_comment(comment_id):
 def print_hi():
     print(f"hi (Current time: {datetime.now().strftime('%H:%M:%S')})")
 
+def run_hourly_selection_wrapper():
+    """Wrapper to run selection in scheduler"""
+    selector = TweetSelector()
+    selected_tweet = selector.select_best_tweet()
+    if selected_tweet:
+        print(f"Hourly tweet selected and posted: {selected_tweet}")
+    else:
+        print("No tweet selected this hour")
+
 # Add scheduler setup before the app.run
 if __name__ == '__main__':
     scheduler = BackgroundScheduler()
-    scheduler.add_job(func=run_hourly_selection, trigger='cron', hour='*', minute='0')
+    scheduler.add_job(func=run_hourly_selection_wrapper, trigger='cron', hour='*', minute='0')
     scheduler.start()
     
     app.run(debug=True, port=6000, host='0.0.0.0')
