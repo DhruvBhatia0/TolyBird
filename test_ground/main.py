@@ -1,37 +1,22 @@
-from theblockchainapi import SolanaAPIResource, SolanaCurrencyUnit, SolanaNetwork, SolanaWallet
+from solathon.core.instructions import transfer
+from solathon import Client, Transaction, PublicKey, Keypair
 import os
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+client = Client("https://api.devnet.solana.com")
 
-# Get API credentials from .env
-MY_API_KEY_ID = os.getenv("BLOCKCHAIN_API_KEY")
-MY_API_SECRET_KEY = os.getenv("BLOCKCHAIN_API_SECRET")
+private_key = ""
+sender = Keypair.from_private_key(private_key)
+receiver = PublicKey("9QowtwuhQ9rWaF2jcbeid3GcDTDYEtDDFxCgkUfTYjM6")
+amount = 10000000
 
-BLOCKCHAIN_API_RESOURCE = SolanaAPIResource(
-    api_key_id=MY_API_KEY_ID,
-    api_secret_key=MY_API_SECRET_KEY
-)
-
-def check_wallet_balance():
-    # Create wallet instance using your existing private key
-    wallet = SolanaWallet(
-        b58_private_key=os.getenv("TREASURY_PRIVATE_KEY")
+instruction = transfer(
+        from_public_key=sender.public_key,
+        to_public_key=receiver, 
+        lamports=amount
     )
-    
-    # Derive public key from wallet
-    public_key = BLOCKCHAIN_API_RESOURCE.derive_public_key(wallet=wallet)
-    print(f"Public Key: {public_key}")
-    
-    # Get wallet balance
-    balance_result = BLOCKCHAIN_API_RESOURCE.get_balance(
-        public_key,
-        unit=SolanaCurrencyUnit.SOL,
-        network=SolanaNetwork.DEVNET
-    )
-    print(f"Balance: {balance_result['balance']} SOL")
-    
 
-if __name__ == '__main__':
-    check_wallet_balance()
+transaction = Transaction(instructions=[instruction], signers=[sender])
+
+result = client.send_transaction(transaction)
+print("Transaction result: ", result)
+
