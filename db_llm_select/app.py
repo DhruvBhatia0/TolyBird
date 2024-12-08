@@ -4,7 +4,7 @@ from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import time
-from tweet_selector import run_hourly_selection
+from tweet_selector import TweetSelector
 
 app = Flask(__name__)
 CORS(app, resources={
