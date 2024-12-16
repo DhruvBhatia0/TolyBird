@@ -2,9 +2,10 @@ from flask import Flask, request, jsonify
 from db_operations import DatabaseManager
 from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
-from tweet_selector import run_hourly_selection
+from tweet_selector import TweetSelector
+import numpy as np
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -134,6 +135,32 @@ def get_tweet_comments(tweet_id):
     comments = db.get_tweet_comments(tweet_id)
     return jsonify(comments)
 
+@app.route('/tweets', methods=['GET'])
+def get_tweets():
+    try:
+        # Get all tweets ordered by creation time, most recent first
+        db.cur.execute("""
+            SELECT tweet_text, wallet_address, payout_amount, created_at 
+            FROM tweets 
+            ORDER BY created_at DESC
+            LIMIT 50
+        """)
+        tweets = db.cur.fetchall()
+        
+        formatted_tweets = []
+        for tweet in tweets:
+            formatted_tweets.append({
+                'tweet_text': tweet['tweet_text'],
+                'wallet_address': tweet['wallet_address'],
+                'payout_amount': float(tweet['payout_amount']),
+                'created_at': tweet['created_at'].isoformat() if tweet['created_at'] else None
+            })
+        
+        return jsonify(formatted_tweets)
+    except Exception as e:
+        print(f"Error fetching tweets: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 # Comment endpoints
 @app.route('/comments', methods=['POST'])
 def create_comment():
@@ -154,6 +181,57 @@ def get_comment(comment_id):
     if not comment:
         return jsonify({"error": "Comment not found"}), 404
     return jsonify(comment)
+
+@app.route('/total_potential_payout', methods=['POST'])
+def total_potential_payout():
+    try:
+        data = request.get_json()
+        user_bid = float(data.get('bid_amount', 0))
+        
+        if user_bid <= 0:
+            return jsonify({"error": "bid_amount must be greater than 0"}), 400
+
+        # Get all bids from the last hour
+        one_hour_ago = datetime.now() - timedelta(hours=1)
+        db.cur.execute(
+            """
+            SELECT bid_amount FROM submissions 
+            WHERE created_at > %s
+            """,
+            (one_hour_ago,)
+        )
+        existing_bids = [float(row['bid_amount']) for row in db.cur.fetchall()]
+        
+        # Add the user's hypothetical bid
+        all_bids = existing_bids + [user_bid]
+        
+        # Calculate percentile of user's bid
+        percentile = np.percentile(all_bids, all_bids.index(user_bid) * 100.0 / len(all_bids))
+        
+        # Calculate reward percentage (scales from 30% to 70%)
+        reward_percentage = 0.3 + (percentile / 100.0 * 0.4)
+        
+        # Calculate total pool and adjusted pool
+        total_pool = sum(all_bids)
+        adjusted_pool = total_pool - user_bid
+        
+        # Calculate reward from pool
+        reward_from_pool = adjusted_pool * reward_percentage
+        
+        # Total potential payout is their bid back plus their share of the pool
+        total_payout = user_bid + reward_from_pool
+        
+        return jsonify({
+            "potential_payout": total_payout,
+            "original_bid": user_bid,
+            "additional_reward": reward_from_pool
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "status": "error"
+        }), 500
 
 # Add this function for the scheduled task
 def print_hi():

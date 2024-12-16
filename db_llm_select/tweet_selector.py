@@ -65,10 +65,16 @@ class TweetSelector:
         try:
             one_hour_ago = datetime.now() - timedelta(hours=1)
             self.db.cur.execute(
-                "SELECT * FROM submissions WHERE created_at > %s ORDER BY bid_amount DESC",
+                """
+                SELECT * FROM submissions 
+                WHERE created_at > %s 
+                ORDER BY bid_amount DESC
+                """,
                 (one_hour_ago,)
             )
-            return [dict(submission) for submission in self.db.cur.fetchall()]
+            submissions = [dict(submission) for submission in self.db.cur.fetchall()]
+            print("\nDebug - SQL Query Result:", submissions)  # Debug line
+            return submissions
         except Exception as e:
             print(f"Error getting recent submissions: {e}")
             return []
@@ -191,39 +197,41 @@ Context of recent tweets and their engagement:
 
     def select_best_tweet(self) -> Optional[str]:
         """Main function to select the best tweet and handle rewards"""
-        # Get recent submissions
-        submissions = self.get_recent_submissions()
-        
-        if not submissions:
-            print("No submissions in the last hour")
-            return None
-
-        # Get all bids for percentile calculation
-        all_bids = [float(sub['bid_amount']) for sub in submissions]
-        total_pool = sum(all_bids)
-        
-        print(f"\n=== Pool Information ===")
-        print(f"Total submissions: {len(submissions)}")
-        print(f"Total pool: {total_pool} SOL")
-        print(f"Highest bid: {max(all_bids)} SOL")
-        print(f"Lowest bid: {min(all_bids)} SOL")
-        print(f"Average bid: {total_pool/len(all_bids):.4f} SOL")
-        print(f"=====================\n")
-
-        # Get recent tweets and their comments
-        recent_tweets = self.get_recent_tweets_with_comments()
-        
-        # Construct prompt
-        prompt = self.construct_llm_prompt(recent_tweets, submissions)
-
         try:
+            # Get recent submissions
+            submissions = self.get_recent_submissions()
+            print("\nDebug - Recent submissions:", submissions)  # Debug line
+
+            if not submissions:
+                print("No submissions found in the last hour")
+                return None
+
+            # Get bid amounts for calculations
+            all_bids = [float(sub['bid_amount']) for sub in submissions]
+            
+            # Print pool information
+            total_pool = sum(all_bids)
+            print("\n=== Pool Information ===")
+            print(f"Total submissions: {len(submissions)}")
+            print(f"Total pool: {total_pool} SOL")
+            print(f"Highest bid: {max(all_bids)} SOL")
+            print(f"Lowest bid: {min(all_bids)} SOL")
+            print(f"Average bid: {total_pool/len(submissions):.4f} SOL")
+            print("=====================\n")
+
+            # Construct prompt for LLM
+            prompt = self.construct_llm_prompt([], submissions)
+            print("\nDebug - LLM Prompt:", prompt)  # Debug line
+
             # Get LLM response
             response = openai_client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[{"role": "system", "content": prompt}],
                 temperature=0.7,
                 max_tokens=500
             )
+
+            print("\nDebug - LLM Response:", response.choices[0].message.content)  # Debug line
 
             # Extract selected tweet
             llm_response = response.choices[0].message.content
@@ -240,14 +248,14 @@ Context of recent tweets and their engagement:
                     break
 
             if not selected_tweet:
-                print("No valid tweet selected by LLM")
+                print("Debug - No tweet found in LLM response")  # Debug line
                 return None
 
             # Post tweet
             # tweet_response = twitter_client.create_tweet(text=selected_tweet)
             
             # Save tweet to database using existing create_tweet method
-            self.db.create_tweet(selected_tweet, selected_submission['wallet_address'])
+            self.db.create_tweet(selected_tweet, selected_submission['wallet_address'], payout_amount=0)  # Initial creation with 0 payout
 
             print(f"Successfully posted tweet: {selected_tweet}")
             print(f"From wallet: {selected_submission['wallet_address']}")
@@ -307,6 +315,13 @@ Context of recent tweets and their engagement:
                     print(f"\nError in reward distribution: {str(e)}")
                     import traceback
                     traceback.print_exc()
+
+                # Save tweet with payout amount
+                self.db.create_tweet(
+                    selected_tweet, 
+                    winner_wallet,
+                    payout_amount=reward_amount
+                )
 
             return selected_tweet
 

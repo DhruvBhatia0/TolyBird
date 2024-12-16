@@ -79,10 +79,11 @@ class DatabaseManager:
         return self.cur.rowcount > 0
 
     # Tweets CRUD operations
-    def create_tweet(self, tweet_text: str, wallet_address: str) -> Dict:
+    def create_tweet(self, tweet_text: str, wallet_address: str, payout_amount: float = 0.0) -> Dict:
+        """Create a tweet with payout amount"""
         self.cur.execute(
-            "INSERT INTO tweets (tweet_text, wallet_address) VALUES (%s, %s) RETURNING *",
-            (tweet_text, wallet_address)
+            "INSERT INTO tweets (tweet_text, wallet_address, payout_amount) VALUES (%s, %s, %s) RETURNING *",
+            (tweet_text, wallet_address, payout_amount)
         )
         self.conn.commit()
         return dict(self.cur.fetchone())
@@ -141,4 +142,10 @@ class DatabaseManager:
 
     def get_tweet_comments(self, tweet_id: int) -> List[Dict]:
         self.cur.execute("SELECT * FROM comments WHERE tweet_id = %s", (tweet_id,))
-        return [dict(row) for row in self.cur.fetchall()] 
+        return [dict(row) for row in self.cur.fetchall()]
+
+    def get_total_payouts(self) -> float:
+        """Get total payout amount in SOL"""
+        self.cur.execute("SELECT COALESCE(SUM(payout_amount), 0) as total FROM tweets")
+        result = self.cur.fetchone()
+        return float(result['total']) if result else 0.0 
