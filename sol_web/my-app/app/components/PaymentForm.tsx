@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { LAMPORTS_PER_SOL, SystemProgram, Transaction, PublicKey } from '@solana/web3.js';
+import { calculatePotentialPayout } from '../services/api';
+import { useRouter } from 'next/navigation';
 
 // Treasury wallet that receives the bids
 const TREASURY_WALLET = new PublicKey('4cCV2NpYqjMeXzbTyPgnsw1azSuQCcvRtAM9GpTotUGk');
@@ -16,6 +18,29 @@ export default function PaymentForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [potentialPayout, setPotentialPayout] = useState<number | null>(null);
+  const router = useRouter();
+
+  const updatePotentialPayout = useCallback(async (amount: string) => {
+    if (!amount || isNaN(parseFloat(amount))) {
+      setPotentialPayout(null);
+      return;
+    }
+    
+    try {
+      const result = await calculatePotentialPayout(parseFloat(amount));
+      setPotentialPayout(result.potential_payout);
+    } catch (error) {
+      console.error('Error calculating potential payout:', error);
+      setPotentialPayout(null);
+    }
+  }, []);
+
+  const handleBidAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setAmount(value);
+    updatePotentialPayout(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +150,7 @@ export default function PaymentForm() {
             <input
               type="number"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={handleBidAmountChange}
               className="input w-full"
               placeholder="Min 0.1 SOL"
               step="0.1"
@@ -151,7 +176,11 @@ export default function PaymentForm() {
             className="btn w-full"
             disabled={loading}
           >
-            {loading ? 'Processing...' : 'Submit Message'}
+            {loading ? 'Processing...' : (
+              potentialPayout ? 
+              `Submit - Potential Payout: ${potentialPayout.toFixed(2)} SOL` : 
+              "Submit"
+            )}
           </button>
 
           <p className="text-xs opacity-70 text-center break-all">

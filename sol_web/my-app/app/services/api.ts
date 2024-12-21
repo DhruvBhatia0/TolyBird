@@ -35,3 +35,19 @@ export const createSubmission = async (data: SubmissionRequest): Promise<Submiss
 
   return response.json();
 }; 
+
+export async function calculatePotentialPayout(bidAmount: number) {
+  const response = await fetch(`${API_BASE_URL}/total_potential_payout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ bid_amount: bidAmount }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to calculate potential payout');
+  }
+
+  return response.json();
+} 
