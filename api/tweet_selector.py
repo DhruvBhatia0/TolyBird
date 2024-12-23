@@ -13,6 +13,10 @@ import base58
 # Load environment variables
 load_dotenv()
 
+BUFFER_PUBKEY = os.getenv("BUFFER_PUBKEY")
+BUFFER_PRIVATE_KEY = os.getenv("BUFFER_PRIVATE_KEY")
+VAULT_PUBKEY = os.getenv("VAULT_PUBKEY")
+
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -28,9 +32,6 @@ twitter_client = tweepy.Client(
 # Initialize Solana client
 solana_client = Client("https://api.mainnet-beta.solana.com")
 
-# Add these constants at the top with other initializations
-BUFFER_WALLET = "4cCV2NpYqjMeXzbTyPgnsw1azSuQCcvRtAM9GpTotUGk"
-VAULT_WALLET = "9quG6nuCBGYabE3qRich4zbRDpNzGuSvSCPXLdCJHEDe"
 
 class TweetSelector:
     def __init__(self):
@@ -97,7 +98,9 @@ Context of recent tweets and their engagement:
 """
         
         # Add recent tweets and their comments
-        for tweet in recent_tweets:
+        for index, tweet in enumerate(recent_tweets):
+            if index == 10:
+                break
             prompt += f"\nTweet: {tweet['tweet_text']}"
             prompt += f"\nEngagement: {len(tweet['comments'])} comments"
             if tweet['comments']:
@@ -277,15 +280,15 @@ Context of recent tweets and their engagement:
                 print(f"========================\n")
 
                 try:
-                    buffer_private_key = os.getenv('BUFFER_PRIVATE_KEY')
-                    if not buffer_private_key:
+                    
+                    if not BUFFER_PRIVATE_KEY:
                         raise ValueError("Buffer private key not found in environment variables")
 
                     print("\nStarting reward distribution process...")
                     
                     # Transfer reward to winner
                     winner_tx = self.transfer_sol(
-                        buffer_private_key,
+                        BUFFER_PRIVATE_KEY,
                         winner_wallet,
                         reward_amount
                     )
@@ -297,8 +300,8 @@ Context of recent tweets and their engagement:
                         
                         # Transfer remaining pool to vault
                         vault_tx = self.transfer_sol(
-                            buffer_private_key,
-                            VAULT_WALLET,
+                            BUFFER_PRIVATE_KEY,
+                            VAULT_PUBKEY,
                             remaining_pool
                         )
                         

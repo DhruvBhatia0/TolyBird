@@ -8,7 +8,7 @@ import { calculatePotentialPayout } from '../services/api';
 import { useRouter } from 'next/navigation';
 
 // Treasury wallet that receives the bids
-const TREASURY_WALLET = new PublicKey('4cCV2NpYqjMeXzbTyPgnsw1azSuQCcvRtAM9GpTotUGk');
+const BUFFER_PUBKEY = new PublicKey(process.env.NEXT_PUBLIC_BUFFER_PUBKEY || '');
 
 export default function PaymentForm() {
   const { connection } = useConnection();
@@ -59,7 +59,7 @@ export default function PaymentForm() {
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
-          toPubkey: TREASURY_WALLET,
+          toPubkey: BUFFER_PUBKEY,
           lamports: parseFloat(amount) * LAMPORTS_PER_SOL,
         })
       );
@@ -116,7 +116,7 @@ export default function PaymentForm() {
       <div className="text-sm text-center opacity-70">
         <p>Your bid will be sent to:</p>
         <code className="text-xs break-all block mt-1">
-          {TREASURY_WALLET.toString()}
+          {BUFFER_PUBKEY.toString()}
         </code>
       </div>
 
